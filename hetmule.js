@@ -27,7 +27,7 @@ smart sätt att ladda "sidor" och "komponenter"
 
 var model = {};
 
-var tactics = {};
+var plan = {};
 
 
 
