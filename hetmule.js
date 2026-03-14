@@ -23,13 +23,17 @@ smart sätt att ladda "sidor" och "komponenter"
 
 - fullskärm
 
+plan
+varje plan har en status
+
+
 */
 
 var model = {};
 
-var plan = {};
+var plan = [];
 
-
+var interval = null;
 
 
 window.onload = function() {
@@ -40,7 +44,13 @@ window.onload = function() {
   
   loadParametersIntoModel();
   
+  //starta användarens start
+  
   perform ('H_start');
+  
+  //starta flow
+  
+  interval = setInterval(flow, 5000);
   
 }
 
@@ -84,6 +94,31 @@ function loadParametersIntoModel ()
   for (const [key, value] of params) {
     
     model[key] = value;
+    
+  }
+  
+}
+
+function flow () 
+{
+  
+  //console.log(plan);
+/*  
+  läs plan, från topp till botten
+  
+  titta på en planerad händelse
+    
+  om endast status "ready" = kör
+  om inte - hoppa till nästa
+  
+  
+   
+*/    
+  
+  for (let i = 0 ; i < plan.length ; i++)
+  {
+    
+    console.log(plan[i]);
     
   }
   
@@ -276,7 +311,7 @@ function request (url, options={})
 
 }
  */
-function dom (tag=false, parent_node=false, options={}) 
+function dom (tag = false, parent_node = false, options = {}) 
 {
   
   if (!tag) {
@@ -301,61 +336,63 @@ function dom (tag=false, parent_node=false, options={})
     
   }
   
-  if (options.namespace) {
-    
-    var node = document.createElementNS(options.namespace, tag);
-    
-  } else {
-    
-    var node = document.createElement(tag);
-    
-  }
+  if (options) {
   
-  if (options.text) {
-    
-    const text_node = document.createTextNode(options.text);
-    
-    node.appendChild(text_node);
-    
-  }
-  
-  if (options.attributes) {
-    
-    for (let i in options.attributes) {
+    if (options.namespace) {
       
-      node.setAttribute(i, options.attributes[i]);
+      var node = document.createElementNS(options.namespace, tag);
+      
+      delete options.namespace;
+      
+    } else {
+      
+      var node = document.createElement(tag);
       
     }
     
-  }
-  
-  if (options.style) {
-    
-    for (let s in options.style) {
+    if (options.text) {
       
-      node.style[s] = options.style[s];
+      const text_node = document.createTextNode(options.text);
       
-    }
-    
-  }
-  
-  if (options.children) {
-    
-    for (let c in options.children) {
+      node.appendChild(text_node);
       
-      const child_tag = options.children[c].tag || tag;
-      
-      dom (child_tag, node, options.children[c]);
+      delete options.text;
       
     }
     
-  }
-  
-  if (options.before) {
+    for (var o in options) {
+      
+      if (o == 'before') {
+        
+        continue;
+        
+      }
+      
+      var attribute_text = options[o];
+      
+      if (o == 'style') {
+        
+        attribute_text = '';
+
+        for (var a in options[o]) {
+
+          attribute_text += a + ': ' + options[o][a] + ';';
+          
+        }
+        
+      } 
+        
+      node.setAttribute(o, attribute_text);
+      
+    }   
     
-    parent_node.insertBefore(node, options.before);
-    
-    return node;
+    if (options.before) {
+      
+      parent_node.insertBefore(node, options.before);
+      
+      return node;
+      
+    }
     
   }
   
