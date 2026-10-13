@@ -1,192 +1,204 @@
 # Hetmule.js
 
-Ett litet js-bibliotek för single page applications utan ramverk och byggsteg. En fil, inga beroenden.
+A small js library for single page applications, without frameworks or build steps. One file, no dependencies.
 
 ```html
 <script src="hetmule.js"></script>
 <script src="app.js"></script>
 ```
 
-Allt finns i det globala objektet `H`.
+Everything lives in the global object `H`.
 
-| Behov | Funktion |
+| Need | Function |
 |---|---|
-| Bygga dom utan `innerHTML` | `H.el`, `H.svg`, `H.mount`, `H.on` |
-| Dom och text från data (json/yaml) | `H.build`, `H.fill`, `H.get`, `H.set` |
-| Adressfältet och sidor | `H.params`, `H.router` |
-| Hämta data, polla och tunga beräkningar | `H.request`, `H.poll`, `H.queue` |
-| Övrigt | `H.debounce`, `H.fullscreen`, `H.download` |
+| Build dom without `innerHTML` | `H.el`, `H.svg`, `H.mount`, `H.on` |
+| Dom and text from data (json/yaml) | `H.build`, `H.fill`, `H.get`, `H.set` |
+| The address bar and pages | `H.params`, `H.router` |
+| Fetch data, poll and heavy computations | `H.request`, `H.poll`, `H.queue` |
+| Other | `H.debounce`, `H.fullscreen`, `H.download` |
 
-Testerna finns i `test/index.html`. Öppna sidan via en webbserver, t.ex. MAMP: http://localhost:8888/hetmule/test/ (nätverkstesterna hoppas över om sidan öppnas som fil).
+The tests are in `test/index.html`. Open the page through a web server, e.g. MAMP: http://localhost:8888/hetmule/test/ (the network tests are skipped if the page is opened as a file).
 
 ---
 
 ## Dom
 
-### `H.el(tagg, props?, ...barn)`
+### `H.el(tag, props?, ...children)`
 
 ```js
-const knapp = H.el('button', {
-  class: ['knapp', aktiv && 'aktiv'],   // sträng eller lista, falska värden hoppas över
-  style: { color: 'red', '--bredd': '3px' },
-  'data-id': rad.id,                    // allt annat blir attribut, med samma namn som i html
-  disabled: !rad.redigerbar,            // true = attributet sätts, false = det sätts inte
-  onclick: () => spara(rad),            // funktioner på on… blir händelselyssnare
-}, 'Spara ', H.el('small', rad.namn));
+const button = H.el('button', {
+  class: ['button', active && 'active'],  // string or array, falsy values are skipped
+  style: { color: 'red', '--width': '3px' },
+  'data-id': row.id,                      // everything else becomes an attribute, named as in html
+  disabled: !row.editable,                // true = the attribute is set, false = it is not
+  onclick: () => save(row),               // functions on on… become event listeners
+}, 'Save ', H.el('small', row.name));
 ```
 
-Barn kan vara element, strängar, tal eller listor. `null`, `undefined` och `false` hoppas över, så villkor och `map` fungerar direkt:
+Children can be elements, strings, numbers or arrays. `null`, `undefined` and `false` are skipped, so conditions and `map` work directly:
 
 ```js
-H.el('ul', rader.map(r => H.el('li', r.namn)), tom && H.el('li', 'Inga träffar'))
+H.el('ul', rows.map(r => H.el('li', r.name)), empty && H.el('li', 'No results'))
 ```
 
-Strängar blir alltid text, aldrig html. Data från användare eller server kan alltså inte smuggla in html. Därför går det också bra att bygga texten med en template-sträng:
+Strings always become text, never html. Data from users or servers can't sneak in html. That also makes it safe to build text with a template string:
 
 ```js
-H.mount('#status', `Beräknar… ${klara} av ${totalt}`)
+H.mount('#status', `Computing… ${done} of ${total}`)
 ```
 
-`value`, `checked` och `selected` sätts som egenskaper och efter barnen, så `H.el('select', { value: 'b' }, ...options)` fungerar.
+`value`, `checked` and `selected` are set as properties and after the children, so `H.el('select', { value: 'b' }, ...options)` works.
 
-### `H.svg(tagg, props?, ...barn)`
+### `H.svg(tag, props?, ...children)`
 
-Som `H.el`, men i SVG-namnrymden. Ikoner byggs också så:
+Like `H.el`, but in the SVG namespace. Icons are built this way too:
 
 ```js
-H.svg('svg', { class: 'pil', viewBox: '0 0 256 256', fill: 'currentColor' },
+H.svg('svg', { class: 'arrow', viewBox: '0 0 256 256', fill: 'currentColor' },
   H.svg('path', { d: 'M228,192a4,4,0,0,1-4,4H80…' }))
 ```
 
-Hetmule har medvetet ingen funktion för att göra om html-strängar till noder. Om en ikon har många delar kan den ligga som en egen fil: `H.el('img', { src: 'ikoner/pil.svg', alt: '' })`.
+Hetmule deliberately has no function for turning html strings into nodes. An icon with many parts can live in its own file: `H.el('img', { src: 'icons/arrow.svg', alt: '' })`.
 
-### `H.mount(mål, ...barn)`
+### `H.mount(target, ...children)`
 
-Ersätter allt innehåll i `mål`, som kan vara ett element eller en css-selektor. Utan barn tömmer den elementet. För att lägga till något sist räcker det inbyggda `element.append(H.el(...))`.
+Replaces all content of `target`, which can be an element or a css selector. Without children it empties the element.
 
-### `H.on(rot, händelse, selektor, fn)`
+### Inserting elsewhere
 
-Lyssnar på en förälder och reagerar på barn som matchar selektorn, även sådana som skapas efteråt. Det passar stora tabeller, där en lyssnare per cell blir många. Returnerar en funktion som tar bort lyssnaren.
+`H.el` returns an ordinary element, so the browser's own methods handle every other position:
 
 ```js
-H.on('#tabell', 'click', 'td', (event, td) => filtrera(td.dataset.kolumn));
+list.append(H.el('li', 'Last'));            // last inside list
+list.prepend(H.el('li', 'First'));          // first inside list
+row.before(H.el('tr', H.el('td', 'New')));  // right before row
+row.after(H.el('tr', H.el('td', 'New')));   // right after row
+old.replaceWith(H.el('p', 'Replacement'));  // instead of old
+```
+
+### `H.on(root, event, selector, fn)`
+
+Listens on a parent and reacts to children matching the selector, including ones created later. Good for big tables, where one listener per cell adds up. Returns a function that removes the listener.
+
+```js
+H.on('#table', 'click', 'td', (event, td) => filter(td.dataset.column));
 ```
 
 ---
 
-## Dom från data
+## Dom from data
 
-### `H.fill(mall, data)` · `H.get(objekt, sökväg, reserv?)` · `H.set(objekt, sökväg, värde)`
+### `H.fill(template, data)` · `H.get(object, path, fallback?)` · `H.set(object, path, value)`
 
 ```js
-H.fill('{fnamn} {enamn}.', person)    // "Ada Lovelace."
-H.fill('Hej {saknas}', {})            // "Hej {saknas}" – felet syns i stället för att bli tomt
-H.get(modell, 'inloggad.namn', '–')   // reservvärde om något led saknas
-H.set(modell, 'filter.parti', 'S')    // skapar objekt som saknas på vägen
+H.fill('{first} {last}.', person)       // "Ada Lovelace."
+H.fill('Hello {missing}', {})           // "Hello {missing}" – the mistake shows instead of going blank
+H.get(model, 'user.name', '–')          // fallback if any step is missing
+H.set(model, 'filter.party', 'S')       // creates missing objects along the way
 ```
 
 ### `H.build(spec, data?)`
 
-Bygger dom från en struktur som kan ligga i json eller yaml: `[tagg, props?, ...barn]`. Strängar i texter och attribut fylls med `H.fill`. En lista som inte börjar med ett taggnamn är flera noder bredvid varandra.
+Builds dom from a structure that can live in json or yaml: `[tag, props?, ...children]`. Strings in text and attributes are filled with `H.fill`. An array that doesn't start with a tag name is several sibling nodes.
 
 ```js
-H.mount('#sida', H.build([
-  ['h1', 'Hej {namn}'],
-  ['p', ['a', { href: '{länk}' }, 'Läs mer']]
-], { namn: 'Bo', länk: '?sida=om' }));
+H.mount('#page', H.build([
+  ['h1', 'Hello {name}'],
+  ['p', ['a', { href: '{link}' }, 'Read more']]
+], { name: 'Bo', link: '?page=about' }));
 ```
 
 ---
 
-## Adressfältet och sidor
+## The address bar and pages
 
-### `H.params(värden?, push?)`
+### `H.params(values?, push?)`
 
 ```js
-H.params()                             // läs: { sida: 'start', f: ['a', 'b'] } – upprepade nycklar blir listor
-H.params({ sort: '-parti', f: ['a'] }) // skriv, utan att ladda om – tomma värden hoppas över
-H.params({ sida: 'om' }, true)         // skriv och skapa en historiepunkt
+H.params()                               // read: { page: 'start', f: ['a', 'b'] } – repeated keys become arrays
+H.params({ sort: '-party', f: ['a'] })   // write, without reloading – empty values are skipped
+H.params({ page: 'about' }, true)        // write and create a history entry
 ```
 
 ### `H.router({ param, start, render, params? })`
 
 ```js
 const router = H.router({
-  param: 'sida',                              // get-parametern för sidans namn
-  start: 'start',                             // sida om ingen anges
-  params: () => ({ inloggad: modell.id }),    // övrigt som ska ligga i adressen
-  render: async sida => {                     // rita sidan
-    H.mount('#sida', await byggSida(sida));
+  param: 'page',                            // the query parameter holding the page name
+  start: 'start',                           // page to show when none is given
+  params: () => ({ user: model.id }),       // anything else that should be in the address
+  render: async page => {                   // draw the page
+    H.mount('#page', await buildPage(page));
   }
 });
 
-router.go('kontakt');           // ny historiepunkt, rita och scrolla upp
-router.sync();                  // skriv om adressen när något i params har ändrats
-H.el('a', { href: router.url('kontakt') }, 'Kontakt')
+router.go('contact');           // new history entry, render and scroll to top
+router.sync();                  // rewrite the address when something in params has changed
+H.el('a', { href: router.url('contact') }, 'Contact')
 ```
 
-Vanliga länkar till samma sida, som `<a href="?sida=kontakt">`, byter sida utan att laddas om. De går fortfarande att öppna i en ny flik. Bakåtknappen och omladdning fungerar.
+Plain links to the same page, like `<a href="?page=contact">`, switch pages without reloading. They can still be opened in a new tab. The back button and reloading work.
 
 ---
 
-## Data och tid
+## Data and time
 
 ### `H.request(url, { method, payload, as, bust, headers, signal })`
 
 ```js
-const data = await H.request('data/sida.yaml');      // formatet avgörs av svaret
-const rad  = await H.request('api/rad', {
+const data = await H.request('data/page.yaml');      // the format is decided by the response
+const row  = await H.request('api/row', {
   method: 'POST',
-  payload: { id: 3 },   // objekt och listor skickas som json, annat (FormData, text) som det är
-  as: 'json',           // json | yaml | text | response – annars efter Content-Type och filändelse
-  bust: true,           // hämta på nytt, inte från cachen
+  payload: { id: 3 },   // objects and arrays are sent as json, anything else (FormData, text) as is
+  as: 'json',           // json | yaml | text | response – otherwise by Content-Type and file extension
+  bust: true,           // fetch again, not from the cache
 });
 ```
 
-Utan `as` blir `.yaml`/`.yml` yaml (kräver `js-yaml`), json blir data och resten text. `HEAD` ger själva svaret. Svar som inte är ok (404, 500 och så vidare) kastar ett fel med `error.response`.
+Without `as`, `.yaml`/`.yml` becomes yaml (requires `js-yaml`), json becomes data and the rest text. `HEAD` returns the response itself. Responses that aren't ok (404, 500 and so on) throw an error with `error.response`.
 
 ### `H.poll(fn, { every, onChange, onError })`
 
-Kör `fn` när man vill (`check`) eller med jämna mellanrum (`start`). `onChange` körs vid första svaret och sedan bara när svaret ändras. Om en kontroll redan pågår startas ingen ny.
+Runs `fn` on demand (`check`) or at intervals (`start`). `onChange` runs on the first result and then only when the result changes. If a check is already running, no new one is started.
 
 ```js
 const poller = H.poll(() => H.request(CONFIG.allt_json_url, { bust: true }), {
   every: 30000,
-  onChange: (data, tidigare) => laddaOchBeräkna(data, tidigare !== undefined),
-  onError: e => H.mount('#status', H.el('span', { class: 'fel' }, 'Kunde inte hämta data: ', e.message)),
+  onChange: (data, previous) => loadAndCompute(data, previous !== undefined),
+  onError: e => H.mount('#status', H.el('span', { class: 'error' }, 'Could not fetch data: ', e.message)),
 });
 
-await poller.check();   // manuell kontroll ("Kontrollera nu")
-poller.start();         // auto-refresh på
-poller.stop();          // auto-refresh av
+await poller.check();   // manual check ("Check now")
+poller.start();         // auto-refresh on
+poller.stop();          // auto-refresh off
 ```
 
-### `H.queue(lista, fn, { onProgress, signal })`
+### `H.queue(list, fn, { onProgress, signal })`
 
-Kör `fn(post, index)` på varje post i portioner om några millisekunder, så att sidan går att använda under tiden. Returnerar ett promise med resultaten.
+Runs `fn(item, index)` on every item in slices of a few milliseconds, so the page stays usable meanwhile. Returns a promise with the results.
 
 ```js
-const resultat = await H.queue(val, körSimulator, {
-  onProgress: (klara, totalt) => H.mount('#status', `Beräknar… ${klara} av ${totalt}`),
-  signal: controller.signal,   // valfritt, för att avbryta
+const results = await H.queue(elections, runSimulator, {
+  onProgress: (done, total) => H.mount('#status', `Computing… ${done} of ${total}`),
+  signal: controller.signal,   // optional, to cancel
 });
 ```
 
-### Övrigt
+### Other
 
 ```js
-sokfalt.oninput = H.debounce(() => sok(sokfalt.value), 200);
-H.fullscreen();                          // växla, eller H.fullscreen(true/false)
-H.download('struktur.yaml', text);       // ge användaren en fil att spara
+search.oninput = H.debounce(() => find(search.value), 200);
+H.fullscreen();                            // toggle, or H.fullscreen(true/false)
+H.download('structure.yaml', text);        // give the user a file to save
 ```
 
 ---
 
-## Från våra projekt
+## From our projects
 
-Så här kan befintlig kod se ut med hetmule.
+This is how existing code can look with hetmule. Function names are kept from each project.
 
-**mandatkollen: kolumnväljaren** (`byggKolumnToggle`, ca 30 rader)
+**mandatkollen: the column picker** (`byggKolumnToggle`, about 30 lines)
 
 ```js
 function byggKolumnToggle() {
@@ -195,28 +207,28 @@ function byggKolumnToggle() {
       H.el('input', {
         type: 'checkbox',
         checked: !STATE.hiddenCols[col.key],
-        onchange: e => växlaKolumn(col.key, e.target.checked),
+        onchange: e => toggleColumn(col.key, e.target.checked),
       }),
       ' ' + col.label,
-      harFilter(col) && H.el('span', {
-        class: 'filter-ikon',
-        title: 'Kolumnen har ett aktivt filter – döljs kolumnen tas filtret bort',
+      hasFilter(col) && H.el('span', {
+        class: 'filter-icon',
+        title: 'The column has an active filter – hiding the column removes the filter',
       }, STATE.soloFilters[col.key] !== undefined ? ' ◉' : ' ●')
     )
   ));
 }
 ```
 
-**mandatkollen: beräkningskön och auto-refresh** (`byggKö`, `körKö`, `kontrolleraAlltJson`, `hanteraPollTimer`)
+**mandatkollen: the computation queue and auto-refresh** (`byggKö`, `körKö`, `kontrolleraAlltJson`, `hanteraPollTimer`)
 
 ```js
 const poller = H.poll(() => H.request(CONFIG.allt_json_url, { bust: true }), {
   every: CONFIG.poll_interval_ms,
-  onChange: async (data, tidigare) => {
-    const rader = (await H.queue(byggKö(data), behandlaItem, {
-      onProgress: (klara, totalt) => uppdateraStatus(klara, klara, totalt - klara),
+  onChange: async (data, previous) => {
+    const rows = (await H.queue(byggKö(data), behandlaItem, {
+      onProgress: (done, total) => uppdateraStatus(done, done, total - done),
     })).flat();
-    if (tidigare) diffOchMerge(rader); else STATE.rows = rader;
+    if (previous) diffOchMerge(rows); else STATE.rows = rows;
     renderTabell();
   },
 });
@@ -226,7 +238,7 @@ autorefresh.onchange = () => autorefresh.checked ? poller.start() : poller.stop(
 btnRefresh.onclick = () => poller.check();
 ```
 
-**promisi: navigering** (`navigera`, `_byggUrl`, `popstate`, klickdelegering för `data-nav-target`)
+**promisi: navigation** (`navigera`, `_byggUrl`, `popstate`, click delegation for `data-nav-target`)
 
 ```js
 App.router = H.router({
@@ -242,22 +254,22 @@ App.router = H.router({
 });
 ```
 
-Länkarna blir vanliga `href: App.router.url(id)` i stället för `data-nav-target`.
+Links become plain `href: App.router.url(id)` instead of `data-nav-target`.
 
-**promisi: sökträffar.** I dag byggs de med `innerHTML` och data, vilket gör att html i en sida slår igenom:
+**promisi: search results.** Today they are built with `innerHTML` and data, so html in a page leaks through:
 
 ```js
 H.el('a', { href: App.router.url(r.id) },
   H.el('strong', r.titel), H.el('br'), H.el('small', r.snippet))
 ```
 
-**hap/vallokal.** `länka_in(tag, förälder, text, attribut)` blir `förälder.append(H.el(tag, attribut, text))`. `ladda_jox`, `ladda_get_parametrar`, `sätt_upp_sida`/`till` och `uppdatera_url` ersätts av `H.request`, `H.params` och `H.router`, och `onclick: 'till("x")'` blir `href: router.url('x')`.
+**hap/vallokal.** `länka_in(tag, parent, text, attributes)` becomes `parent.append(H.el(tag, attributes, text))`, and `länka_in(..., före)` becomes `före.before(H.el(...))`. `ladda_jox`, `ladda_get_parametrar`, `sätt_upp_sida`/`till` and `uppdatera_url` are replaced by `H.request`, `H.params` and `H.router`, and `onclick: 'till("x")'` becomes `href: router.url('x')`.
 
 ---
 
-## Idéer framåt
+## Ideas ahead
 
-Från den första planen för hetmule: uppgifter med status och nästa steg. Det mesta täcks nu av `H.poll` (hur ofta), `H.queue` (små portioner) och vanliga `setTimeout`. Frågorna är kvar att fundera på:
+From the first plan for hetmule: tasks with a status and a next step. Most of it is now covered by `H.poll` (how often), `H.queue` (small pieces) and plain `setTimeout`. The questions remain to think about:
 
 - How important?
 - How heavy?

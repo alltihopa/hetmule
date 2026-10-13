@@ -1,109 +1,109 @@
 <!doctype html>
-<html lang="sv">
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>hetmule – test</title>
+  <title>hetmule – tests</title>
   <style>
     body { font: 14px/1.5 system-ui, sans-serif; margin: 2rem auto; max-width: 52rem; padding: 0 1rem; color: #1f1f1f; }
     h2 { margin: 2rem 0 0.25rem; font-size: 1.15rem; }
     .intro { margin: 0 0 0.75rem; color: #555; }
     ul { list-style: none; padding: 0; margin: 0; }
     li { padding: 0.5rem 0.75rem; border-left: 4px solid #ccc; margin-bottom: 0.4rem; background: #f7f7f7; }
-    li.ok { border-color: #137333; }
-    li.fel { border-color: #b3261e; background: #fdeceb; }
-    .namn { font-weight: 600; }
-    .ok .namn::before { content: '✓ '; color: #137333; }
-    .fel .namn::before { content: '✗ '; color: #b3261e; }
-    .beskrivning { margin: 0.2rem 0 0; color: #444; }
-    .felmeddelande { margin: 0.3rem 0 0; color: #b3261e; font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; }
-    #summa { font-size: 1.1rem; font-weight: 600; }
+    li.pass { border-color: #137333; }
+    li.fail { border-color: #b3261e; background: #fdeceb; }
+    .name { font-weight: 600; }
+    .pass .name::before { content: '✓ '; color: #137333; }
+    .fail .name::before { content: '✗ '; color: #b3261e; }
+    .description { margin: 0.2rem 0 0; color: #444; }
+    .error { margin: 0.3rem 0 0; color: #b3261e; font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; }
+    #summary { font-size: 1.1rem; font-weight: 600; }
     #sandbox { display: none; }
     code { font-family: ui-monospace, monospace; font-size: 0.92em; background: #ececec; padding: 0 0.25em; border-radius: 3px; }
   </style>
 </head>
 <body>
-  <h1>hetmule – test</h1>
-  <p>Den här sidan kör alla tester för <code>hetmule.js</code> direkt i webbläsaren. Varje test har en kort förklaring av vad som kontrolleras och varför det spelar roll. Nätverkstesterna kräver att sidan öppnas via en webbserver, t.ex. <code>http://localhost:8888/hetmule/test/</code>.</p>
-  <p id="summa">Kör…</p>
-  <div id="resultat"></div>
+  <h1>hetmule – tests</h1>
+  <p>This page runs all tests for <code>hetmule.js</code> directly in the browser. Each test has a short explanation of what it checks and why it matters. The network tests require the page to be opened through a web server, e.g. <code>http://localhost:8888/hetmule/test/</code>.</p>
+  <p id="summary">Running…</p>
+  <div id="results"></div>
   <div id="sandbox"></div>
 
   <script src="../hetmule.js"></script>
   <script>
   (async function () {
 
-    // Ett test har ett namn, en förklaring och en funktion som kastar ett fel om något är fel.
-    // Testerna samlas i grupper med en kort introduktion.
-    const grupper = [];
-    const grupp = (titel, intro) => grupper.push({ titel, intro, tests: [] });
-    const test = (namn, beskrivning, fn) => grupper[grupper.length - 1].tests.push({ namn, beskrivning, fn });
+    // A test has a name, an explanation and a function that throws if something is wrong.
+    // Tests are collected in groups with a short introduction.
+    const groups = [];
+    const group = (title, intro) => groups.push({ title, intro, tests: [] });
+    const test = (name, description, fn) => groups[groups.length - 1].tests.push({ name, description, fn });
 
     const eq = (a, b, msg) => {
       const sa = JSON.stringify(a), sb = JSON.stringify(b);
-      if (sa !== sb) throw new Error((msg ? msg + ': ' : '') + 'väntade ' + sb + ', fick ' + sa);
+      if (sa !== sb) throw new Error((msg ? msg + ': ' : '') + 'expected ' + sb + ', got ' + sa);
     };
-    const ok = (v, msg) => { if (!v) throw new Error(msg || 'inte sant'); };
-    const vanta = ms => new Promise(r => setTimeout(r, ms));
+    const ok = (v, msg) => { if (!v) throw new Error(msg || 'not true'); };
+    const wait = ms => new Promise(r => setTimeout(r, ms));
     const sandbox = document.getElementById('sandbox');
     const SVG = 'http://www.w3.org/2000/svg';
 
 
-    grupp('Bygga dom', 'H.el och H.svg skapar element utan innerHTML. H.mount sätter in dem på sidan och H.on lyssnar på händelser. Det är grunden för att slippa bygga html som strängar i js-koden.');
+    group('Building dom', 'H.el and H.svg create elements without innerHTML. H.mount puts them on the page and H.on listens to events. This is the foundation for not building html as strings in js code.');
 
-    test('el: tagg, klass och barn',
-      'Ett element kan få klasser som lista och barn av olika slag: element, strängar, tal och listor, även nästlade. null och false hoppas över, så att villkor som "visa && H.el(...)" fungerar direkt.',
+    test('el: tag, class and children',
+      'An element can get classes as an array and children of different kinds: elements, strings, numbers and arrays, even nested ones. null and false are skipped, so conditions like "show && H.el(...)" work directly.',
       () => {
-        const n = H.el('div', { class: ['a', null, false && 'c', 'b'] }, 'hej ', H.el('b', 'du'), 0, null, false, [' x', [' y']]);
-        eq(n.outerHTML, '<div class="a b">hej <b>du</b>0 x y</div>');
+        const n = H.el('div', { class: ['a', null, false && 'c', 'b'] }, 'hi ', H.el('b', 'you'), 0, null, false, [' x', [' y']]);
+        eq(n.outerHTML, '<div class="a b">hi <b>you</b>0 x y</div>');
       });
 
-    test('el: utan props',
-      'Props-objektet är valfritt. Om andra argumentet inte är ett vanligt objekt räknas det som innehåll, så att H.el("p", "text") räcker för enkla fall.',
+    test('el: without props',
+      'The props object is optional. If the second argument isn\'t a plain object it counts as content, so H.el("p", "text") is enough for simple cases.',
       () => {
         eq(H.el('p', 'text').outerHTML, '<p>text</p>');
         eq(H.el('br').outerHTML, '<br>');
       });
 
-    test('el: 0 och tom sträng blir text',
-      'Talet 0 och den tomma strängen är riktigt innehåll och ska bli textnoder, inte försvinna som om de vore false.',
+    test('el: 0 and the empty string become text',
+      'The number 0 and the empty string are real content and should become text nodes, not disappear as if they were false.',
       () => {
         eq(H.el('span', 0).textContent, '0');
         eq(H.el('span', '').childNodes.length, 1);
       });
 
-    test('el: text är aldrig html',
-      'Strängar blir alltid text. Om data från en användare eller server innehåller html-taggar visas de som tecken, så att ingen kan smuggla in egen kod. Det är den stora fördelen jämfört med innerHTML.',
+    test('el: text is never html',
+      'Strings always become text. If data from a user or server contains html tags, they are shown as characters, so nobody can sneak in their own code. This is the big advantage over innerHTML.',
       () => {
         const n = H.el('p', '<img src=x onerror=alert(1)>', '<b>x</b>');
         eq(n.children.length, 0);
         eq(n.textContent, '<img src=x onerror=alert(1)><b>x</b>');
       });
 
-    test('el: attribut, även data- och aria-',
-      'Allt som inte är class, style, value/checked/selected eller en händelse blir ett vanligt attribut, med samma namn som i html. Då behövs inga specialfall för data-* och aria-*.',
+    test('el: attributes, including data- and aria-',
+      'Everything that isn\'t class, style, value/checked/selected or an event becomes a plain attribute, named as in html. No special cases are needed for data-* and aria-*.',
       () => {
-        const n = H.el('a', { href: '?sida=om', 'data-id': 7, 'aria-label': 'Om oss' });
-        eq([n.getAttribute('href'), n.dataset.id, n.getAttribute('aria-label')], ['?sida=om', '7', 'Om oss']);
+        const n = H.el('a', { href: '?page=about', 'data-id': 7, 'aria-label': 'About us' });
+        eq([n.getAttribute('href'), n.dataset.id, n.getAttribute('aria-label')], ['?page=about', '7', 'About us']);
       });
 
-    test('el: booleska attribut',
-      'disabled: false ska ge en knapp som går att klicka på. Med setAttribute blir det disabled="false", och då är knappen ändå avstängd. Här sätts attributet bara när värdet är sant, och null/undefined hoppas också över.',
+    test('el: boolean attributes',
+      'disabled: false should give a clickable button. With setAttribute it becomes disabled="false", and the button is disabled anyway. Here the attribute is only set when the value is true, and null/undefined are skipped too.',
       () => {
         eq(H.el('button', { disabled: false }).disabled, false);
         eq(H.el('button', { disabled: true }).disabled, true);
         eq(H.el('div', { hidden: true, title: null }).outerHTML, '<div hidden=""></div>');
       });
 
-    test('el: style som sträng och objekt',
-      'Stil kan anges som en css-sträng eller som ett objekt. Objektet klarar camelCase (fontSize), bindestreck (font-size) och css-variabler (--bredd).',
+    test('el: style as string and object',
+      'Style can be a css string or an object. The object handles camelCase (fontSize), hyphens (font-size) and css variables (--width).',
       () => {
-        const n = H.el('div', { style: { color: 'red', fontSize: '12px', 'margin-top': '2px', '--bredd': '3' } });
-        eq([n.style.color, n.style.fontSize, n.style.marginTop, n.style.getPropertyValue('--bredd')], ['red', '12px', '2px', '3']);
+        const n = H.el('div', { style: { color: 'red', fontSize: '12px', 'margin-top': '2px', '--width': '3' } });
+        eq([n.style.color, n.style.fontSize, n.style.marginTop, n.style.getPropertyValue('--width')], ['red', '12px', '2px', '3']);
         eq(H.el('div', { style: 'color: blue' }).style.color, 'blue');
       });
 
-    test('el: händelser',
-      'En funktion på en nyckel som börjar med on blir en riktig addEventListener, inte en sträng i ett attribut. Namnet görs om till gemener, så onclick och onClick fungerar båda.',
+    test('el: events',
+      'A function on a key starting with on becomes a real addEventListener, not a string in an attribute. The name is lowercased, so both onclick and onClick work.',
       () => {
         let a = 0, b = 0;
         const n = H.el('button', { onclick: () => a++, onClick: () => b++ });
@@ -112,22 +112,22 @@
         eq(n.hasAttribute('onclick'), false);
       });
 
-    test('el: value och checked som egenskaper',
-      'value, checked och selected sätts som egenskaper på elementet, inte som attribut. Annars syns inte värdet i fältet efter att användaren har ändrat något.',
+    test('el: value and checked as properties',
+      'value, checked and selected are set as properties on the element, not as attributes. Otherwise the value isn\'t shown in the field after the user has changed something.',
       () => {
         eq(H.el('input', { value: 'abc' }).value, 'abc');
         eq(H.el('input', { type: 'checkbox', checked: true }).checked, true);
       });
 
-    test('el: value på select sätts efter options',
-      'En select kan bara få ett värde som finns bland dess options. Därför läggs barnen till först och value sätts sist, annars hamnar valet på fel option.',
+    test('el: value on select is set after the options',
+      'A select can only take a value that exists among its options. So the children are added first and value is set last, otherwise the wrong option is selected.',
       () => {
         const s = H.el('select', { value: 'b' }, ['a', 'b'].map(v => H.el('option', { value: v }, v.toUpperCase())));
         eq(s.value, 'b');
       });
 
-    test('el: props-objektet ändras inte',
-      'Samma props-objekt ska kunna användas flera gånger, t.ex. i en loop, och ge samma resultat varje gång.',
+    test('el: the props object is not changed',
+      'The same props object should be reusable, e.g. in a loop, and give the same result every time.',
       () => {
         const props = { class: 'k', title: 't' };
         const a = H.el('p', props), b = H.el('p', props);
@@ -135,322 +135,336 @@
         eq(a.outerHTML, b.outerHTML);
       });
 
-    test('svg: namnrymd och klass',
-      'SVG-element måste skapas i SVG-namnrymden, annars ritas de inte. H.svg sköter det, och class fungerar likadant som i H.el.',
+    test('svg: namespace and class',
+      'SVG elements must be created in the SVG namespace, otherwise they aren\'t drawn. H.svg takes care of that, and class works the same as in H.el.',
       () => {
-        const s = H.svg('svg', { viewBox: '0 0 10 10', class: 'ikon' }, H.svg('circle', { r: 5 }));
-        eq([s.namespaceURI, s.firstChild.namespaceURI, s.getAttribute('class')], [SVG, SVG, 'ikon']);
+        const s = H.svg('svg', { viewBox: '0 0 10 10', class: 'icon' }, H.svg('circle', { r: 5 }));
+        eq([s.namespaceURI, s.firstChild.namespaceURI, s.getAttribute('class')], [SVG, SVG, 'icon']);
       });
 
-    test('mount: ersätter innehållet',
-      'H.mount ersätter allt innehåll i ett element och tar samma sorters barn som H.el. Målet kan vara ett element eller en css-selektor. Utan barn tömmer den elementet. För att lägga till något sist räcker det inbyggda element.append().',
+    test('mount: replaces the content',
+      'H.mount replaces all content of an element and takes the same kinds of children as H.el. The target can be an element or a css selector. Without children it empties the element.',
       () => {
         H.mount(sandbox, H.el('p', 'a'), ['b', null, 'c']);
         eq(sandbox.innerHTML, '<p>a</p>bc');
-        H.mount('#sandbox', 'ny');
-        eq(sandbox.innerHTML, 'ny');
+        H.mount('#sandbox', 'new');
+        eq(sandbox.innerHTML, 'new');
         H.mount(sandbox);
         eq(sandbox.childNodes.length, 0);
       });
 
-    test('on: delegering för element som skapas senare',
-      'H.on lyssnar på en förälder och reagerar när man klickar på ett barn som matchar selektorn, även på element som ritas om efteråt. Det passar stora tabeller, där en lyssnare per cell blir många. Klick på ett inre element, här ett span i knappen, räknas till knappen. Funktionen som returneras tar bort lyssnaren.',
+    test('inserting elsewhere: the browser\'s own methods',
+      'H.el returns an ordinary element, so append, prepend, before, after and replaceWith place it anywhere. That is why hetmule has no functions of its own for it.',
       () => {
-        let traff = null;
-        const sluta = H.on(sandbox, 'click', '.knapp', (e, el) => { traff = el.dataset.id; });
-        H.mount(sandbox, H.el('button', { class: 'knapp', 'data-id': '7' }, H.el('span', 'x')));
+        const middle = H.el('li', 'b');
+        H.mount(sandbox, H.el('ul', middle));
+        middle.before(H.el('li', 'a'));
+        middle.after(H.el('li', 'c'));
+        sandbox.firstChild.prepend(H.el('li', 'first'));
+        sandbox.firstChild.append(H.el('li', 'last'));
+        middle.replaceWith(H.el('li', 'B'));
+        eq(sandbox.textContent, 'firstaBclast');
+        H.mount(sandbox);
+      });
+
+    test('on: delegation for elements created later',
+      'H.on listens on a parent and reacts when you click a child matching the selector, even elements drawn afterwards. Good for big tables, where one listener per cell adds up. A click on an inner element, here a span inside the button, counts as the button. The returned function removes the listener.',
+      () => {
+        let hit = null;
+        const stop = H.on(sandbox, 'click', '.button', (e, el) => { hit = el.dataset.id; });
+        H.mount(sandbox, H.el('button', { class: 'button', 'data-id': '7' }, H.el('span', 'x')));
         sandbox.querySelector('span').click();
-        eq(traff, '7');
-        sluta(); traff = null;
+        eq(hit, '7');
+        stop(); hit = null;
         sandbox.querySelector('span').click();
-        eq(traff, null);
+        eq(hit, null);
         H.mount(sandbox);
       });
 
 
-    grupp('Dom från data', 'Sökvägar i objekt, mallar med {platshållare} och dom byggd från strukturer som kan ligga i json- eller yaml-filer, som sidorna i promisi.');
+    group('Dom from data', 'Paths in objects, templates with {placeholders} and dom built from structures that can live in json or yaml files, like the pages in promisi.');
 
-    test('get och set',
-      'H.get hämtar ett värde med en sökväg som "a.b.c" och ger ett reservvärde om något led saknas, i stället för att krascha. H.set skapar de objekt som saknas på vägen. Siffror i sökvägen fungerar för listor.',
+    test('get and set',
+      'H.get reads a value with a path like "a.b.c" and returns a fallback if any step is missing, instead of crashing. H.set creates the objects missing along the way. Numbers in the path work for arrays.',
       () => {
         const o = {};
         H.set(o, 'a.b.c', 3);
         eq(o, { a: { b: { c: 3 } } });
         eq(H.get(o, 'a.b.c'), 3);
-        eq(H.get(o, 'a.x.c', 'saknas'), 'saknas');
+        eq(H.get(o, 'a.x.c', 'missing'), 'missing');
         eq(H.get({ l: [10, 20] }, 'l.1'), 20);
-        eq(H.get({ n: 0 }, 'n', 5), 0, 'falska värden som 0 ska inte ersättas');
+        eq(H.get({ n: 0 }, 'n', 5), 0, 'falsy values like 0 should not be replaced');
       });
 
     test('fill',
-      'H.fill byter ut {sökväg} i en text mot värden ur data. Saknade värden lämnas kvar som {sökväg}, så att felet syns på sidan i stället för att bli tomt.',
+      'H.fill replaces {path} in a text with values from data. Missing values are left as {path}, so the mistake shows on the page instead of going blank.',
       () => {
-        eq(H.fill('{fnamn} {enamn}.', { fnamn: 'Ada', enamn: 'L' }), 'Ada L.');
-        eq(H.fill('Hej {person.namn}', {}), 'Hej {person.namn}');
-        eq(H.fill('{n} st', { n: 0 }), '0 st');
+        eq(H.fill('{first} {last}.', { first: 'Ada', last: 'L' }), 'Ada L.');
+        eq(H.fill('Hello {person.name}', {}), 'Hello {person.name}');
+        eq(H.fill('{n} pcs', { n: 0 }), '0 pcs');
       });
 
-    test('build: från data',
-      'H.build bygger dom från listor på formen [tagg, props, ...barn]. Med data fylls platshållare i både texter och attribut.',
+    test('build: from data',
+      'H.build builds dom from arrays of the form [tag, props, ...children]. With data, placeholders are filled in both text and attributes.',
       () => {
-        const spec = ['ul', { class: 'lista {typ}' }, ['li', 'Hej {namn}'], ['li', { 'data-id': '{id}' }, 'två']];
-        const n = H.build(spec, { namn: 'Bo', typ: 'x', id: 5 });
-        eq(n.outerHTML, '<ul class="lista x"><li>Hej Bo</li><li data-id="5">två</li></ul>');
+        const spec = ['ul', { class: 'list {type}' }, ['li', 'Hello {name}'], ['li', { 'data-id': '{id}' }, 'two']];
+        const n = H.build(spec, { name: 'Bo', type: 'x', id: 5 });
+        eq(n.outerHTML, '<ul class="list x"><li>Hello Bo</li><li data-id="5">two</li></ul>');
       });
 
-    test('build: lista med noder och text',
-      'En lista som inte börjar med ett taggnamn är flera noder bredvid varandra, som en hel sida. Resultatet kan skickas direkt till H.mount.',
+    test('build: a list of nodes and text',
+      'An array that doesn\'t start with a tag name is several sibling nodes, like a whole page. The result can be passed straight to H.mount.',
       () => {
-        H.mount(sandbox, H.build([['h1', 'Rubrik'], 'text', ['p', 'stycke']]));
-        eq(sandbox.innerHTML, '<h1>Rubrik</h1>text<p>stycke</p>');
+        H.mount(sandbox, H.build([['h1', 'Heading'], 'text', ['p', 'paragraph']]));
+        eq(sandbox.innerHTML, '<h1>Heading</h1>text<p>paragraph</p>');
         H.mount(sandbox);
       });
 
-    test('build: svg-barn får rätt namnrymd',
-      'Allt som ligger inuti en svg i datastrukturen ska skapas som SVG, även flera nivåer ned. Annars syns inte grafiken.',
+    test('build: svg children get the right namespace',
+      'Everything inside an svg in the data structure should be created as SVG, even several levels down. Otherwise the graphics don\'t show.',
       () => {
         const n = H.build(['svg', { viewBox: '0 0 1 1' }, ['g', ['path', { d: 'M0 0' }]]]);
         eq(n.querySelector('path').namespaceURI, SVG);
       });
 
 
-    grupp('Adressfältet', 'Läsa och skriva get-parametrar, så att en vy går att länka till och ladda om. Mandatkollen sparar t.ex. filter och sortering där.');
+    group('The address bar', 'Reading and writing query parameters, so a view can be linked to and reloaded. Mandatkollen, for example, keeps filters and sorting there.');
 
-    test('params: läsa och skriva',
-      'H.params(värden) skriver till adressfältet utan att ladda om sidan, och H.params() läser tillbaka. En lista blir en upprepad nyckel och läses tillbaka som lista, t.ex. flera filtervärden. Tomma värden hoppas över så att adressen hålls kort, och true blir 1.',
+    test('params: read and write',
+      'H.params(values) writes to the address bar without reloading, and H.params() reads it back. An array becomes a repeated key and is read back as an array, e.g. several filter values. Empty values are skipped to keep the address short, and true becomes 1.',
       () => {
-        const fore = location.href;
-        H.params({ a: 1, tom: '', nej: false, ja: true, f: ['x', 'y'], n: null });
-        eq(location.search, '?a=1&ja=1&f=x&f=y');
-        eq(H.params(), { a: '1', ja: '1', f: ['x', 'y'] });
-        history.replaceState(null, '', fore);
+        const before = location.href;
+        H.params({ a: 1, empty: '', no: false, yes: true, f: ['x', 'y'], n: null });
+        eq(location.search, '?a=1&yes=1&f=x&f=y');
+        eq(H.params(), { a: '1', yes: '1', f: ['x', 'y'] });
+        history.replaceState(null, '', before);
       });
 
-    test('params: historiepunkt',
-      'Med push som andra argument skapas en ny historiepunkt, så att bakåtknappen går tillbaka till föregående adress. Utan push skrivs den nuvarande över.',
+    test('params: history entry',
+      'With push as the second argument a new history entry is created, so the back button returns to the previous address. Without push the current one is overwritten.',
       async () => {
-        const fore = location.href;
-        const langd = history.length;
-        H.params({ steg: 1 });
-        eq(history.length, langd, 'utan push ska historiken inte växa');
-        H.params({ steg: 2 }, true);
-        eq(history.length, langd + 1);
+        const before = location.href;
+        const length = history.length;
+        H.params({ step: 1 });
+        eq(history.length, length, 'without push the history should not grow');
+        H.params({ step: 2 }, true);
+        eq(history.length, length + 1);
         history.back();
-        await vanta(100);
-        eq(H.params(), { steg: '1' });
-        history.replaceState(null, '', fore);
+        await wait(100);
+        eq(H.params(), { step: '1' });
+        history.replaceState(null, '', before);
       });
 
 
-    grupp('Sidor', 'H.router byter "sida" i en single page application, håller adressfältet i takt och får bakåtknappen att fungera.');
+    group('Pages', 'H.router switches "pages" in a single page application, keeps the address bar in step and makes the back button work.');
 
-    test('router: start, länkar och tillbaka',
-      'Vid start visas startsidan och adressen får ?sida=start, plus de extra parametrar som params ger. Ett klick på en vanlig länk till ?sida=om visar den sidan utan att ladda om och skapar en historiepunkt. Länken fungerar fortfarande att öppna i en ny flik. history.back(), alltså bakåtknappen, visar startsidan igen. render ska anropas exakt en gång per sidbyte.',
+    test('router: start, links and back',
+      'On start the start page is shown and the address gets ?page=start, plus the extra parameters from params. A click on a plain link to ?page=about shows that page without reloading and creates a history entry. The link can still be opened in a new tab. history.back(), i.e. the back button, shows the start page again. render should be called exactly once per page switch.',
       async () => {
-        const fore = location.href;
-        const ritat = [];
+        const before = location.href;
+        const rendered = [];
         const router = H.router({
-          param: 'sida',
+          param: 'page',
           start: 'start',
           params: () => ({ extra: 'x' }),
-          render: sida => {
-            ritat.push(sida);
-            H.mount(sandbox, H.el('a', { href: '?sida=om' }, 'Om'));
+          render: page => {
+            rendered.push(page);
+            H.mount(sandbox, H.el('a', { href: '?page=about' }, 'About'));
           }
         });
-        await vanta(0);
+        await wait(0);
         eq(router.current, 'start');
-        eq(H.params(), { sida: 'start', extra: 'x' });
-        eq(router.url('om'), location.pathname + '?sida=om&extra=x', 'router.url ger en färdig länk');
+        eq(H.params(), { page: 'start', extra: 'x' });
+        eq(router.url('about'), location.pathname + '?page=about&extra=x', 'router.url gives a ready-made link');
 
         sandbox.querySelector('a').click();
-        await vanta(0);
-        eq(router.current, 'om');
-        eq(H.params().sida, 'om');
+        await wait(0);
+        eq(router.current, 'about');
+        eq(H.params().page, 'about');
 
         history.back();
-        await vanta(100);
+        await wait(100);
         eq(router.current, 'start');
-        eq(ritat, ['start', 'om', 'start']);
+        eq(rendered, ['start', 'about', 'start']);
 
-        history.replaceState(null, '', fore);
+        history.replaceState(null, '', before);
         H.mount(sandbox);
       });
 
 
-    grupp('Hjälpfunktioner', 'Små verktyg som behövs i de flesta projekt.');
+    group('Helpers', 'Small tools needed in most projects.');
 
     test('debounce',
-      'H.debounce väntar tills anropen har slutat komma innan funktionen körs, och skickar med de senaste argumenten. Tre snabba anrop ska ge en körning. Det används t.ex. i sökfält, så att man inte söker vid varje tangenttryckning.',
+      'H.debounce waits until the calls have stopped coming before running the function, and passes on the latest arguments. Three quick calls should give one run. Used e.g. in search fields, so you don\'t search on every keystroke.',
       async () => {
-        const fick = [];
-        const f = H.debounce(v => fick.push(v), 20);
+        const got = [];
+        const f = H.debounce(v => got.push(v), 20);
         f(1); f(2); f(3);
-        await vanta(60);
-        eq(fick, [3]);
+        await wait(60);
+        eq(got, [3]);
       });
 
 
-    grupp('Kö', 'H.queue kör en tung funktion på många poster i små portioner, så att sidan går att använda under tiden. Det är så mandatkollen räknar alla val genom valsimulatorn.');
+    group('Queue', 'H.queue runs a heavy function on many items in small slices, so the page stays usable meanwhile. This is how mandatkollen runs every election through the simulator.');
 
-    test('queue: alla poster, i ordning, med progress',
-      'Alla poster ska behandlas, resultaten ska komma i samma ordning som posterna och funktionen ska få postens index. onProgress rapporterar hur många som är klara, sist 4 av 4.',
+    test('queue: all items, in order, with progress',
+      'Every item should be processed, results should come in the same order as the items and the function should get the item\'s index. onProgress reports how many are done, finally 4 of 4.',
       async () => {
-        const steg = [];
-        const r = await H.queue([1, 2, 3, 4], (x, i) => x * 10 + i, { onProgress: (k, t) => steg.push([k, t]) });
+        const steps = [];
+        const r = await H.queue([1, 2, 3, 4], (x, i) => x * 10 + i, { onProgress: (d, t) => steps.push([d, t]) });
         eq(r, [10, 21, 32, 43]);
-        eq(steg[steg.length - 1], [4, 4]);
+        eq(steps[steps.length - 1], [4, 4]);
       });
 
-    test('queue: släpper fram webbläsaren mellan portionerna',
-      '30 poster som tar 2 ms vardera ska delas upp i flera portioner om ungefär 12 ms. Mellan portionerna hinner webbläsaren rita och svara på klick.',
+    test('queue: lets the browser in between slices',
+      '30 items taking 2 ms each should be split into several slices of about 12 ms. Between the slices the browser has time to draw and respond to clicks.',
       async () => {
-        let portioner = 0;
-        await H.queue(new Array(30).fill(0), () => { const t = Date.now(); while (Date.now() - t < 2); }, { onProgress: () => portioner++ });
-        ok(portioner >= 3, 'bara ' + portioner + ' portioner');
+        let slices = 0;
+        await H.queue(new Array(30).fill(0), () => { const t = Date.now(); while (Date.now() - t < 2); }, { onProgress: () => slices++ });
+        ok(slices >= 3, 'only ' + slices + ' slices');
       });
 
-    test('queue: tom lista och avbrott',
-      'En tom lista ska ge ett tomt resultat. En lång kö ska gå att avbryta med en AbortController, t.ex. om ny data kommer in mitt i en beräkning. Då avvisas promiset.',
+    test('queue: empty list and cancelling',
+      'An empty list should give an empty result. A long queue should be cancellable with an AbortController, e.g. if new data arrives in the middle of a computation. The promise is then rejected.',
       async () => {
         eq(await H.queue([], x => x), []);
         const ctrl = new AbortController();
         const p = H.queue(new Array(1000).fill(0), () => { const t = Date.now(); while (Date.now() - t < 1); }, { signal: ctrl.signal });
         setTimeout(() => ctrl.abort(), 30);
-        let avbruten = false;
-        try { await p; } catch (e) { avbruten = true; }
-        ok(avbruten, 'kön avbröts inte');
+        let cancelled = false;
+        try { await p; } catch (e) { cancelled = true; }
+        ok(cancelled, 'the queue was not cancelled');
       });
 
-    test('queue: fel i funktionen avvisar',
-      'Om funktionen kastar ett fel ska kön stanna och felet komma fram via promiset, så att det går att fånga med try/catch.',
+    test('queue: an error in the function rejects',
+      'If the function throws, the queue should stop and the error should come through the promise, so it can be caught with try/catch.',
       async () => {
-        let fel = null;
-        try { await H.queue([1], () => { throw new Error('pang'); }); } catch (e) { fel = e.message; }
-        eq(fel, 'pang');
+        let error = null;
+        try { await H.queue([1], () => { throw new Error('bang'); }); } catch (e) { error = e.message; }
+        eq(error, 'bang');
       });
 
 
-    grupp('Polling', 'H.poll kör en funktion när man vill eller med jämna mellanrum, och reagerar bara när svaret har ändrats. Det är samma sak som auto-refresh av allt.json i mandatkollen.');
+    group('Polling', 'H.poll runs a function on demand or at intervals, and only reacts when the result has changed. The same thing as the auto-refresh of allt.json in mandatkollen.');
 
-    test('poll: onChange bara vid ändring',
-      'Första svaret räknas som en ändring, så samma kod kan sköta både första laddningen och uppdateringar. Ett likadant svar ger ingen ändring. När värdet ändras får onChange både det nya och det förra värdet.',
+    test('poll: onChange only on change',
+      'The first result counts as a change, so the same code can handle both the first load and updates. An identical result gives no change. When the value changes, onChange gets both the new and the previous value.',
       async () => {
-        let v = { n: 1 }; const andringar = [];
-        const p = H.poll(() => v, { onChange: (ny, gammal) => andringar.push([ny, gammal]) });
+        let v = { n: 1 }; const changes = [];
+        const p = H.poll(() => v, { onChange: (next, previous) => changes.push([next, previous]) });
         eq(await p.check(), true);
         v = { n: 1 };
-        eq(await p.check(), false, 'samma innehåll i ett nytt objekt är ingen ändring');
+        eq(await p.check(), false, 'the same content in a new object is not a change');
         v = { n: 2 };
         eq(await p.check(), true);
-        eq(andringar, [[{ n: 1 }, undefined], [{ n: 2 }, { n: 1 }]]);
+        eq(changes, [[{ n: 1 }, undefined], [{ n: 2 }, { n: 1 }]]);
       });
 
-    test('poll: start och stop',
-      'start kör kontrollen med jämna mellanrum och stop avbryter. Efter stop ska inga fler kontroller göras. Det motsvarar kryssrutan "Auto-refresh".',
+    test('poll: start and stop',
+      'start runs the check at intervals and stop ends it. After stop no more checks should run. This matches the "Auto-refresh" checkbox.',
       async () => {
         let n = 0;
         const p = H.poll(() => n++, { every: 15 }).start();
         ok(p.running);
-        await vanta(70);
+        await wait(70);
         p.stop();
         ok(!p.running);
-        const efter = n;
-        ok(efter >= 2, 'bara ' + efter + ' kontroller');
-        await vanta(40);
-        eq(n, efter, 'fortsatte efter stop');
+        const after = n;
+        ok(after >= 2, 'only ' + after + ' checks');
+        await wait(40);
+        eq(n, after, 'continued after stop');
       });
 
-    test('poll: fel går till onError och nästa kontroll fungerar',
-      'Ett fel, t.ex. att servern inte svarar, ska gå till onError och inte krascha sidan. Nästa kontroll ska köras som vanligt, även när felet kastas direkt.',
+    test('poll: errors go to onError and the next check works',
+      'An error, e.g. the server not responding, should go to onError and not crash the page. The next check should run as usual, even when the error is thrown immediately.',
       async () => {
-        let fel = null, kasta = true;
-        const p = H.poll(() => { if (kasta) throw new Error('nej'); return 1; }, { onError: e => { fel = e.message; } });
-        eq(await p.check(), false); eq(fel, 'nej');
-        kasta = false;
+        let error = null, fail = true;
+        const p = H.poll(() => { if (fail) throw new Error('no'); return 1; }, { onError: e => { error = e.message; } });
+        eq(await p.check(), false); eq(error, 'no');
+        fail = false;
         eq(await p.check(), true);
       });
 
-    test('poll: en kontroll i taget',
-      'Om man klickar "Kontrollera nu" medan en kontroll pågår ska ingen ny startas. Man får samma pågående kontroll tillbaka.',
+    test('poll: one check at a time',
+      'Clicking "Check now" while a check is running should not start a new one. You get the running check back.',
       async () => {
         let n = 0;
-        const p = H.poll(async () => { n++; await vanta(20); return n; });
+        const p = H.poll(async () => { n++; await wait(20); return n; });
         await Promise.all([p.check(), p.check(), p.check()]);
         eq(n, 1);
       });
 
 
-    const viaHttp = location.protocol.startsWith('http');
+    const overHttp = location.protocol.startsWith('http');
 
-    grupp('Nätverk', viaHttp
-      ? 'Hämtar test/data.json och andra filer från webbservern.'
-      : 'Hoppas över, eftersom sidan är öppnad som fil. Öppna den via en webbserver för att köra de här testerna.');
+    group('Network', overHttp
+      ? 'Fetches test/data.json and other files from the web server.'
+      : 'Skipped, since the page is opened as a file. Open it through a web server to run these tests.');
 
-    if (viaHttp) {
-      test('request: formatet avgörs av svaret',
-        'Utan as väljer H.request format efter serverns Content-Type: json blir data och html blir text. .yaml/.yml läses med js-yaml. Med as kan man bestämma själv.',
+    if (overHttp) {
+      test('request: the format is decided by the response',
+        'Without as, H.request picks the format from the server\'s Content-Type: json becomes data and html becomes text. .yaml/.yml is read with js-yaml. With as you decide yourself.',
         async () => {
-          eq((await H.request('data.json')).namn, 'hetmule');
+          eq((await H.request('data.json')).name, 'hetmule');
           ok((await H.request('index.html')).includes('<html'));
           ok((await H.request('data.json', { as: 'text' })).startsWith('{'));
         });
 
-      test('request: 404 kastar fel',
-        'Ett svar som inte är ok, som 404 eller 500, ska ge ett fel som innehåller svaret. Det ska inte gå vidare som om allt gick bra. fetch gör inte det av sig själv.',
+      test('request: 404 throws',
+        'A response that isn\'t ok, like 404 or 500, should give an error containing the response. It should not carry on as if everything went well. fetch doesn\'t do that by itself.',
         async () => {
-          let fel = null;
-          try { await H.request('finns-inte.json'); } catch (e) { fel = e.response && e.response.status; }
-          eq(fel, 404);
+          let status = null;
+          try { await H.request('does-not-exist.json'); } catch (e) { status = e.response && e.response.status; }
+          eq(status, 404);
         });
 
-      test('request: HEAD ger response',
-        'Ett HEAD-svar har ingen body. Därför ger HEAD tillbaka själva svaret, så att man kan se om filen finns utan att hämta den.',
+      test('request: HEAD returns the response',
+        'A HEAD response has no body. So HEAD returns the response itself, to check whether a file exists without fetching it.',
         async () => {
           const r = await H.request('data.json', { method: 'HEAD' });
           eq(r.ok, true);
         });
 
-      test('poll + request: bevaka en fil',
-        'H.poll och H.request tillsammans bevakar en fil på servern. bust gör att filen hämtas på nytt varje gång, i stället för från webbläsarens cache.',
+      test('poll + request: watch a file',
+        'H.poll and H.request together watch a file on the server. bust makes the file be fetched again every time, instead of from the browser\'s cache.',
         async () => {
-          let fick = null;
-          const p = H.poll(() => H.request('data.json', { bust: true }), { onChange: d => { fick = d.namn; } });
-          eq(await p.check(), true); eq(fick, 'hetmule');
+          let got = null;
+          const p = H.poll(() => H.request('data.json', { bust: true }), { onChange: d => { got = d.name; } });
+          eq(await p.check(), true); eq(got, 'hetmule');
           eq(await p.check(), false);
         });
     }
 
 
-    // ── Kör alla tester och visa resultatet ──
+    // ── Run all tests and show the results ──
 
-    let antal = 0, fel = 0;
+    let count = 0, failed = 0;
 
-    for (const g of grupper) {
-      const lista = H.el('ul');
-      document.getElementById('resultat').append(H.el('h2', g.titel), H.el('p', { class: 'intro' }, g.intro), lista);
+    for (const g of groups) {
+      const list = H.el('ul');
+      document.getElementById('results').append(H.el('h2', g.title), H.el('p', { class: 'intro' }, g.intro), list);
 
       for (const t of g.tests) {
-        antal++;
-        let felmeddelande = null;
+        count++;
+        let error = null;
         try {
           await t.fn();
         } catch (e) {
-          fel++;
-          felmeddelande = e.message;
-          console.error(t.namn, e);
+          failed++;
+          error = e.message;
+          console.error(t.name, e);
         }
-        lista.append(H.el('li', { class: felmeddelande ? 'fel' : 'ok' },
-          H.el('div', { class: 'namn' }, t.namn),
-          H.el('p', { class: 'beskrivning' }, t.beskrivning),
-          felmeddelande && H.el('p', { class: 'felmeddelande' }, felmeddelande)
+        list.append(H.el('li', { class: error ? 'fail' : 'pass' },
+          H.el('div', { class: 'name' }, t.name),
+          H.el('p', { class: 'description' }, t.description),
+          error && H.el('p', { class: 'error' }, error)
         ));
       }
     }
 
-    const summa = (antal - fel) + ' av ' + antal + ' ok' + (viaHttp ? '' : ' (nätverkstesterna hoppades över – öppna sidan via en webbserver)');
-    H.mount('#summa', summa);
-    document.title = (fel ? 'FEL ' : 'OK ') + summa;
+    const summary = (count - failed) + ' of ' + count + ' passed' + (overHttp ? '' : ' (network tests skipped – open the page through a web server)');
+    H.mount('#summary', summary);
+    document.title = (failed ? 'FAIL ' : 'OK ') + summary;
   })();
   </script>
 </body>

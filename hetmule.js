@@ -2,16 +2,16 @@
 
 HETMULE
 
-Ett litet js-bibliotek för single page applications utan ramverk och byggsteg.
-Ladda filen med <script src="hetmule.js"></script> och använd allt via H.
+A small js library for single page applications, without frameworks or build steps.
+Load it with <script src="hetmule.js"></script> and use everything through H.
 
-- H.el, H.svg, H.mount, H.on   bygg dom och lyssna på händelser, utan innerHTML
-- H.build, H.fill, H.get, H.set dom och text från data
-- H.params, H.router            adressfältet och "sidor"
-- H.request, H.poll, H.queue    hämta data, polla och räkna utan att låsa sidan
+- H.el, H.svg, H.mount, H.on   build dom and listen to events, without innerHTML
+- H.build, H.fill, H.get, H.set dom and text from data
+- H.params, H.router            the address bar and "pages"
+- H.request, H.poll, H.queue    fetch data, poll and compute without freezing the page
 - H.debounce, H.fullscreen, H.download
 
-Se README.md för exempel.
+See README.md for examples.
 
 */
 
@@ -21,7 +21,7 @@ window.H = (() => {
 
   const SVG = 'http://www.w3.org/2000/svg';
 
-  // Sätts som egenskaper, eftersom attributen bara anger startvärdet
+  // Set as properties, since the attributes only hold the initial value
   const PROPERTIES = ['value', 'checked', 'selected'];
 
   const isObject = v => v !== null && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype;
@@ -29,7 +29,7 @@ window.H = (() => {
 
   // ── Dom ─────────────────────────────────────────────────────────────────────
 
-  // Gör om barn till noder: listor plattas ut, null/undefined/false/true hoppas över, resten blir text
+  // Turn children into nodes: arrays are flattened, null/undefined/false/true are skipped, the rest becomes text
   function nodes (children)
   {
     return children.flat(Infinity)
@@ -42,7 +42,7 @@ window.H = (() => {
     const props = isObject(args[0]) ? args.shift() : {};
     const node = ns ? document.createElementNS(ns, tag) : document.createElement(tag);
 
-    // Barnen först, så att value på en select träffar rätt option
+    // Children first, so that value on a select picks the right option
     node.append(...nodes(args));
 
     for (const [key, value] of Object.entries(props)) {
@@ -79,7 +79,7 @@ window.H = (() => {
     return value === undefined ? fallback : value;
   }
 
-  // Byt ut {sökväg} mot värden ur data. Saknade värden lämnas kvar, så att felet syns.
+  // Replace {path} with values from data. Missing values are left in place, so the mistake is visible.
   function fill (template, data)
   {
     return String(template).replace(/\{([^{}\s]+)\}/g, (match, path) => {
@@ -103,9 +103,9 @@ window.H = (() => {
   }
 
 
-  // ── Adressfältet ────────────────────────────────────────────────────────────
+  // ── Address bar ─────────────────────────────────────────────────────────────
 
-  // Listor blir upprepade nycklar, tomma värden hoppas över
+  // Arrays become repeated keys, empty values are skipped
   function query (values)
   {
     const params = new URLSearchParams();
@@ -145,7 +145,7 @@ window.H = (() => {
         if (!replace) scrollTo(0, 0);
       },
 
-      // Skriv om adressen utan att rita om, t.ex. när något i params har ändrats
+      // Rewrite the address without rendering, e.g. when something in params has changed
       sync: () => history.replaceState(null, '', r.url(r.current))
     };
 
@@ -157,7 +157,7 @@ window.H = (() => {
 
     addEventListener('popstate', () => show(params()[param] || start));
 
-    // Vanliga länkar till den här sidan, t.ex. <a href="?sida=om">, byter sida utan att ladda om
+    // Plain links to this page, e.g. <a href="?page=about">, switch page without reloading
     document.addEventListener('click', event => {
       const a = event.target.closest('a[href]');
       if (!a || a.target || event.defaultPrevented || event.button || event.metaKey || event.ctrlKey || event.shiftKey) return;
@@ -172,7 +172,7 @@ window.H = (() => {
   }
 
 
-  // ── Nätverk och tid ─────────────────────────────────────────────────────────
+  // ── Network and time ────────────────────────────────────────────────────────
 
   async function request (url, { method = 'GET', payload, as, bust, headers = {}, signal } = {})
   {
@@ -184,9 +184,9 @@ window.H = (() => {
     if (bust) url += (url.includes('?') ? '&' : '?') + 't=' + Date.now();
 
     const response = await fetch(url, { method, headers, body, signal, cache: bust ? 'no-store' : 'default' });
-    if (!response.ok) throw Object.assign(new Error(method + ' ' + url + ' svarade ' + response.status), { response });
+    if (!response.ok) throw Object.assign(new Error(method + ' ' + url + ' responded ' + response.status), { response });
 
-    // Formatet avgörs av as, annars av filändelsen och serverns Content-Type
+    // The format is decided by as, otherwise by the file extension and the server's Content-Type
     const type = response.headers.get('Content-Type') || '';
     as = as || (method === 'HEAD' ? 'response'
       : /\.ya?ml(\?|$)/i.test(url) || type.includes('yaml') ? 'yaml'
@@ -200,7 +200,7 @@ window.H = (() => {
     return text;
   }
 
-  // Kör fn när man vill (check) eller med jämna mellanrum (start). onChange körs bara när svaret ändras.
+  // Run fn on demand (check) or at intervals (start). onChange only runs when the result changes.
   function poll (fn, { every = 30000, onChange, onError = console.error } = {})
   {
     let timer = null, inflight = null, last, lastKey;
@@ -225,7 +225,7 @@ window.H = (() => {
     const p = {
       get running () { return timer !== null; },
 
-      // Om en kontroll redan pågår startas ingen ny
+      // If a check is already running, no new one is started
       check: () => inflight || (inflight = run().finally(() => { inflight = null; })),
 
       start ()
@@ -245,7 +245,7 @@ window.H = (() => {
     return p;
   }
 
-  // Kör fn på varje post i portioner om några millisekunder, så att sidan går att använda under tiden
+  // Run fn on every item in slices of a few milliseconds, so the page stays usable meanwhile
   function queue (items, fn, { onProgress, signal } = {})
   {
     const list = Array.from(items);
@@ -279,17 +279,17 @@ window.H = (() => {
   }
 
 
-  // ── Övrigt ──────────────────────────────────────────────────────────────────
+  // ── Public API ──────────────────────────────────────────────────────────────
 
   return {
 
-    // H.el('a', { href: '?sida=om', class: ['lank', aktiv && 'aktiv'], onclick: fn }, 'Text', annatElement)
+    // H.el('a', { href: '?page=about', class: ['link', active && 'active'], onclick: fn }, 'Text', otherElement)
     el: (tag, ...args) => create(null, tag, args),
 
-    // Som H.el, i SVG-namnrymden
+    // Like H.el, in the SVG namespace
     svg: (tag, ...args) => create(SVG, tag, args),
 
-    // Ersätt allt innehåll i target (element eller css-selektor)
+    // Replace all content of target (element or css selector)
     mount (target, ...children)
     {
       const node = find(target);
@@ -297,7 +297,7 @@ window.H = (() => {
       return node;
     },
 
-    // Lyssna på händelser för element som matchar selector, även sådana som skapas senare
+    // Listen to events on elements matching selector, including ones created later
     on (root, type, selector, fn)
     {
       const node = find(root);
@@ -309,7 +309,7 @@ window.H = (() => {
       return () => node.removeEventListener(type, listener);
     },
 
-    // Bygg dom från data, t.ex. ['ul', { class: 'lista' }, ['li', 'Hej {namn}']]
+    // Build dom from data, e.g. ['ul', { class: 'list' }, ['li', 'Hello {name}']]
     build: (spec, data) => build(spec, data),
 
     fill,
@@ -332,14 +332,14 @@ window.H = (() => {
     queue,
     debounce,
 
-    // H.fullscreen() växlar, H.fullscreen(true/false) slår på/av
+    // H.fullscreen() toggles, H.fullscreen(true/false) turns it on/off
     async fullscreen (on = !document.fullscreenElement)
     {
       if (on && !document.fullscreenElement) await document.documentElement.requestFullscreen();
       if (!on && document.fullscreenElement) await document.exitFullscreen();
     },
 
-    // Ge användaren en fil att spara
+    // Give the user a file to save
     download (filename, content, type = 'text/plain;charset=utf-8')
     {
       const url = URL.createObjectURL(content instanceof Blob ? content : new Blob([content], { type }));
