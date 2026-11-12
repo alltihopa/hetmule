@@ -240,18 +240,27 @@
         history.replaceState(null, '', before);
       });
 
+    test('params: readable',
+      ': / , and @ are kept as they are, since a query does not need them escaped; & = # + and space still are.',
+      () => {
+        const before = location.href;
+        const values = { time: '2026-09-13T20:00', page: 'meta/pages', dim: 'a,b', who: 'a@b', odd: 'x&y=z #+' };
+        H.params(values);
+        eq(location.search, '?time=2026-09-13T20:00&page=meta/pages&dim=a,b&who=a@b&odd=x%26y%3Dz+%23%2B');
+        eq(H.params(), values);
+        history.replaceState(null, '', before);
+      });
+
     test('params: history entry',
-      'With push as the second argument a new history entry is created, so the back button returns to the previous address. Without push the current one is overwritten.',
+      'With push as the second argument a new history entry is created, so the back button returns to the previous address. Without push the current one is overwritten. Checked by going back rather than with history.length, which depends on what the tab has done before (forward entries, the browser\'s cap of 50 entries).',
       async () => {
         const before = location.href;
-        const length = history.length;
         H.params({ step: 1 });
-        eq(history.length, length, 'without push the history should not grow');
         H.params({ step: 2 }, true);
-        eq(history.length, length + 1);
+        H.params({ step: 3 });
         history.back();
         await wait(100);
-        eq(H.params(), { step: '1' });
+        eq(H.params(), { step: '1' }, 'back should skip step 2, which step 3 replaced, and land on step 1');
         history.replaceState(null, '', before);
       });
 
