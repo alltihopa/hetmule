@@ -240,6 +240,7 @@ const results = await H.queue(elections, runSimulator, {
 ```js
 search.oninput = H.debounce(() => find(search.value), 200);
 H.fullscreen();                            // toggle, or H.fullscreen(true/false)
+H.fullscreen(true, '#chart');              // only that element, full screen
 H.download('structure.yaml', text);        // give the user a file to save
 ```
 

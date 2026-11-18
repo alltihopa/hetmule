@@ -400,6 +400,26 @@
       });
 
 
+    test('fullscreen: the whole page or one element',
+      'H.fullscreen(true, element or selector) asks for that element; without one, the whole page. Checked with stand-ins, since the browser only goes full screen after a click.',
+      async () => {
+        const asked = [];
+        const el = H.el('div', { id: 'fullscreen-test' });
+        sandbox.append(el);
+        const before = document.documentElement.requestFullscreen;
+        el.requestFullscreen = async () => asked.push('element');
+        document.documentElement.requestFullscreen = async () => asked.push('page');
+        try {
+          await H.fullscreen(true, el);
+          await H.fullscreen(true, '#fullscreen-test');
+          await H.fullscreen(true);
+          eq(asked, ['element', 'element', 'page']);
+        } finally {
+          document.documentElement.requestFullscreen = before;
+          el.remove();
+        }
+      });
+
     group('Queue', 'H.queue runs a heavy function on many items in small slices, so the page stays usable meanwhile. This is how mandatkollen runs every election through the simulator.');
 
     test('queue: all items, in order, with progress',

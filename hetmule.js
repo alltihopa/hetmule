@@ -384,10 +384,12 @@ window.H = (() => {
     queue,
     debounce,
 
-    // H.fullscreen() toggles, H.fullscreen(true/false) turns it on/off
-    async fullscreen (on = !document.fullscreenElement)
+    // H.fullscreen() toggles the whole page, H.fullscreen(true/false) turns it on/off, and
+    // H.fullscreen(true, element or selector) shows only that element, full screen
+    async fullscreen (on = !document.fullscreenElement, target = document.documentElement)
     {
-      if (on && !document.fullscreenElement) await document.documentElement.requestFullscreen();
+      const el = find(target);
+      if (on && el && document.fullscreenElement !== el) await el.requestFullscreen();
       if (!on && document.fullscreenElement) await document.exitFullscreen();
     },
 
