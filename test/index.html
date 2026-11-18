@@ -228,7 +228,93 @@
       });
 
 
-    group('The address bar', 'Reading and writing query parameters, so a view can be linked to and reloaded. Mandatkollen, for example, keeps filters and sorting there.');
+    group('Sorting', 'H.sort sorts rows by one or more keys and H.nextSort gives the next state when a column header is clicked: ascending, descending, no sorting. The sort key looks the same as in the address bar, e.g. sort=-party.');
+
+    const parties = [
+      { party: 'S', seats: 107, name: 'Socialdemokraterna' },
+      { party: 'M', seats: 68, name: 'Moderaterna' },
+      { party: 'SD', seats: 73, name: 'Sverigedemokraterna' },
+      { party: 'KD', seats: 19, name: 'Kristdemokraterna' },
+      { party: 'L', seats: 16, name: 'Liberalerna' },
+    ];
+    const col = (rows, key) => rows.map(r => H.get(r, key));
+
+    test('sort: ascending and descending',
+      'A key without a minus sorts ascending, with a minus descending. Numbers are compared as numbers, not as text, so 107 comes after 68.',
+      () => {
+        eq(col(H.sort(parties, 'seats'), 'seats'), [16, 19, 68, 73, 107]);
+        eq(col(H.sort(parties, '-seats'), 'seats'), [107, 73, 68, 19, 16]);
+        eq(col(H.sort(parties, 'party'), 'party'), ['KD', 'L', 'M', 'S', 'SD']);
+      });
+
+    test('sort: a new array, the original is left alone',
+      'The rows in the model keep their order, so "no sorting" just means showing them as they are.',
+      () => {
+        const before = col(parties, 'party');
+        const sorted = H.sort(parties, 'seats');
+        ok(sorted !== parties, 'same array');
+        eq(col(parties, 'party'), before);
+      });
+
+    test('sort: Swedish letters and numbers in text',
+      'Text is compared with the language of the page (or locale), so å ä ö end up after z in Swedish. Numbers inside text are compared as numbers: "Lista 9" before "Lista 10".',
+      () => {
+        const rows = ['ö', 'a', 'å', 'z', 'ä'].map(name => ({ name }));
+        eq(col(H.sort(rows, 'name', { locale: 'sv' }), 'name'), ['a', 'z', 'å', 'ä', 'ö']);
+        const lists = ['Lista 10', 'Lista 9', 'Lista 1'].map(name => ({ name }));
+        eq(col(H.sort(lists, 'name'), 'name'), ['Lista 1', 'Lista 9', 'Lista 10']);
+      });
+
+    test('sort: blank values last, in both directions',
+      'null, undefined, the empty string and NaN always end up at the bottom, so a column with missing values doesn\'t start with a block of empty cells when the direction is switched.',
+      () => {
+        const rows = [{ v: 2 }, { v: null }, { v: 1 }, {}, { v: '' }, { v: 3 }];
+        eq(col(H.sort(rows, 'v'), 'v').slice(0, 3), [1, 2, 3]);
+        eq(col(H.sort(rows, '-v'), 'v').slice(0, 3), [3, 2, 1]);
+      });
+
+    test('sort: several keys and stable order',
+      'With a list of keys the next one decides when values are equal. Rows that are equal on every key keep their original order.',
+      () => {
+        const rows = [
+          { block: 'right', party: 'M', n: 1 }, { block: 'left', party: 'V', n: 2 },
+          { block: 'right', party: 'KD', n: 3 }, { block: 'left', party: 'S', n: 4 },
+          { block: 'left', party: 'S', n: 5 },
+        ];
+        eq(col(H.sort(rows, ['block', '-party']), 'n'), [2, 4, 5, 1, 3]);
+      });
+
+    test('sort: paths, dates and own values',
+      'Keys are paths like in H.get. Dates are compared by time. With by a column can be sorted on a computed value, e.g. a share instead of the raw number.',
+      () => {
+        const rows = [
+          { r: { seats: 5 }, t: new Date('2026-09-13'), votes: 10, total: 100 },
+          { r: { seats: 9 }, t: new Date('2022-09-11'), votes: 30, total: 60 },
+          { r: { seats: 1 }, t: new Date('2018-09-09'), votes: 20, total: 200 },
+        ];
+        eq(col(H.sort(rows, '-r.seats'), 'r.seats'), [9, 5, 1]);
+        eq(col(H.sort(rows, 't'), 'r.seats'), [1, 9, 5]);
+        eq(col(H.sort(rows, '-share', { by: { share: r => r.votes / r.total } }), 'r.seats'), [9, 5, 1]);
+      });
+
+    test('sort: no key',
+      'An empty key (null, \'\' or []) gives the rows in their original order, so the result of H.nextSort can be passed straight in.',
+      () => {
+        eq(col(H.sort(parties, null), 'party'), col(parties, 'party'));
+        eq(col(H.sort(parties, []), 'party'), col(parties, 'party'));
+      });
+
+    test('nextSort: ascending, descending, none',
+      'Clicking the same column steps through ascending → descending → no sorting. Clicking another column starts over with ascending.',
+      () => {
+        eq(H.nextSort(null, 'party'), 'party');
+        eq(H.nextSort('party', 'party'), '-party');
+        eq(H.nextSort('-party', 'party'), null);
+        eq(H.nextSort('-seats', 'party'), 'party');
+      });
+
+
+    group('The address bar','Reading and writing query parameters, so a view can be linked to and reloaded. Mandatkollen, for example, keeps filters and sorting there.');
 
     test('params: read and write',
       'H.params(values) writes to the address bar without reloading, and H.params() reads it back. An array becomes a repeated key and is read back as an array, e.g. several filter values. Empty values are skipped to keep the address short, and true becomes 1.',

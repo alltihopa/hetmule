@@ -7,6 +7,7 @@ Load it with <script src="hetmule.js"></script> and use everything through H.
 
 - H.el, H.svg, H.mount, H.on   build dom and listen to events, without innerHTML
 - H.build, H.fill, H.get, H.set dom and text from data
+- H.sort, H.nextSort            sort rows, e.g. by clicking column headers
 - H.params, H.router            the address bar and "pages"
 - H.request, H.poll, H.queue    fetch data, poll and compute without freezing the page
 - H.debounce, H.fullscreen, H.download
@@ -100,6 +101,52 @@ window.H = (() => {
 
     const childNs = tag === 'svg' ? SVG : tag === 'foreignObject' ? null : ns;
     return create(tag === 'svg' ? SVG : ns, tag, [props, ...rest.map(c => build(c, data, childNs))]);
+  }
+
+
+  // ── Sorting ─────────────────────────────────────────────────────────────────
+
+  const collators = {};
+
+  const blank = v => v === null || v === undefined || v === '' || Number.isNaN(v);
+
+  // Numbers and dates by size, everything else as text: å ä ö in the right place and "9" before "10"
+  function compare (a, b, collator)
+  {
+    if (a instanceof Date) a = a.getTime();
+    if (b instanceof Date) b = b.getTime();
+    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    return collator.compare(String(a), String(b));
+  }
+
+  // keys: 'party', '-party' (descending) or a list, where the next key is used when values are equal.
+  // Returns a new array; equal rows keep their order and blank values always end up last.
+  function sort (rows, keys, { by = {}, locale = document.documentElement.lang || undefined } = {})
+  {
+    const collator = collators[locale] || (collators[locale] = new Intl.Collator(locale, { numeric: true }));
+    const order = [].concat(keys).filter(Boolean).map(k => {
+      const desc = k[0] === '-', key = desc ? k.slice(1) : k;
+      return { desc, value: by[key] || (row => get(row, key)) };
+    });
+
+    return Array.from(rows).sort((ra, rb) => {
+      for (const { desc, value } of order) {
+        const a = value(ra), b = value(rb);
+        if (blank(a) || blank(b)) {
+          if (blank(a) !== blank(b)) return blank(a) ? 1 : -1;
+          continue;
+        }
+        const c = compare(a, b, collator);
+        if (c) return desc ? -c : c;
+      }
+      return 0;
+    });
+  }
+
+  // Clicking a column header: ascending → descending → no sorting. Another column starts ascending.
+  function nextSort (current, key)
+  {
+    return current === key ? '-' + key : current === '-' + key ? null : key;
   }
 
 
@@ -325,6 +372,9 @@ window.H = (() => {
       o[last] = value;
       return obj;
     },
+
+    sort,
+    nextSort,
 
     params,
     router,

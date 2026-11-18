@@ -13,6 +13,7 @@ Everything lives in the global object `H`.
 |---|---|
 | Build dom without `innerHTML` | `H.el`, `H.svg`, `H.mount`, `H.on` |
 | Dom and text from data (json/yaml) | `H.build`, `H.fill`, `H.get`, `H.set` |
+| Sorting, e.g. by column headers | `H.sort`, `H.nextSort` |
 | The address bar and pages | `H.params`, `H.router` |
 | Fetch data, poll and heavy computations | `H.request`, `H.poll`, `H.queue` |
 | Other | `H.debounce`, `H.fullscreen`, `H.download` |
@@ -107,6 +108,54 @@ H.mount('#page', H.build([
   ['p', ['a', { href: '{link}' }, 'Read more']]
 ], { name: 'Bo', link: '?page=about' }));
 ```
+
+---
+
+## Sorting
+
+### `H.sort(rows, keys, { by, locale }?)` · `H.nextSort(current, key)`
+
+```js
+H.sort(rows, 'party')               // ascending
+H.sort(rows, '-seats')              // descending – the same notation as sort=-seats in the address
+H.sort(rows, ['block', '-seats'])   // the next key decides when values are equal
+H.sort(rows, 'result.seats')        // paths like in H.get
+H.sort(rows, '-share', { by: { share: r => r.votes / r.total } })   // sort on a computed value
+```
+
+Returns a new array, the rows themselves keep their order. Numbers and dates are compared by size, everything else as text in the language of the page (`<html lang="sv">`, or `locale`), so å ä ö end up after z and "Lista 9" comes before "Lista 10". Blank values (`null`, `undefined`, `''`, `NaN`) always end up last, whatever the direction. Equal rows keep their order. An empty key gives the rows as they are.
+
+`H.nextSort` is what happens when a column header is clicked: ascending → descending → no sorting, and another column starts with ascending.
+
+```js
+H.nextSort(null, 'party')      // 'party'
+H.nextSort('party', 'party')   // '-party'
+H.nextSort('-party', 'party')  // null
+```
+
+A table where the sorting is kept in the address:
+
+```js
+STATE.sort = H.params().sort || null;
+
+H.on('#table', 'click', 'th[data-key]', (event, th) => {
+  STATE.sort = H.nextSort(STATE.sort, th.dataset.key);
+  H.params({ ...H.params(), sort: STATE.sort });
+  renderTabell();
+});
+
+function renderTabell ()
+{
+  const direction = key => STATE.sort === key ? 'ascending' : STATE.sort === '-' + key ? 'descending' : null;
+  H.mount('#table',
+    H.el('thead', H.el('tr', COLUMNS.map(col =>
+      H.el('th', { 'data-key': col.key, 'aria-sort': direction(col.key) }, col.label)))),
+    H.el('tbody', H.sort(STATE.rows, STATE.sort).map(row =>
+      H.el('tr', COLUMNS.map(col => H.el('td', H.get(row, col.key)))))));
+}
+```
+
+The arrows can be drawn with css on `aria-sort`, e.g. `th[aria-sort=ascending]::after { content: ' ▲' }`.
 
 ---
 
