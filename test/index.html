@@ -327,12 +327,12 @@
       });
 
     test('params: readable',
-      ': / , and @ are kept as they are, since a query does not need them escaped; & = # + and space still are.',
+      ': / , @ and letters like å ä ö are kept as they are, since a query does not need them escaped; & = # + and space still are.',
       () => {
         const before = location.href;
-        const values = { time: '2026-09-13T20:00', page: 'meta/pages', dim: 'a,b', who: 'a@b', odd: 'x&y=z #+' };
+        const values = { time: '2026-09-13T20:00', page: 'meta/pages', dim: 'a,b', who: 'a@b', odd: 'x&y=z #+', sv: 'rösta-på-Öland' };
         H.params(values);
-        eq(location.search, '?time=2026-09-13T20:00&page=meta/pages&dim=a,b&who=a@b&odd=x%26y%3Dz+%23%2B');
+        eq(decodeURI(location.search), '?time=2026-09-13T20:00&page=meta/pages&dim=a,b&who=a@b&odd=x%26y%3Dz+%23%2B&sv=rösta-på-Öland');
         eq(H.params(), values);
         history.replaceState(null, '', before);
       });

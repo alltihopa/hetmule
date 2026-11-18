@@ -161,8 +161,9 @@ window.H = (() => {
         if (v !== null && v !== undefined && v !== false && v !== '') params.append(key, v === true ? 1 : v);
       }
     }
-    // : / , and @ need no escaping in a query, and are easier to read without: time=2026-09-13T20:00
-    const text = params.toString().replace(/%(3A|2F|2C|40)/gi, c => decodeURIComponent(c));
+    // : / , @ and letters like å ä ö need no escaping in a query, and are easier to read without:
+    // time=2026-09-13T20:00, page=rösta
+    const text = params.toString().replace(/%(3A|2F|2C|40)|(?:%[C-F][0-9A-F](?:%[89AB][0-9A-F])+)+/gi, c => decodeURIComponent(c));
     return location.pathname + (text ? '?' + text : '');
   }
 

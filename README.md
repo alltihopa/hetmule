@@ -169,7 +169,7 @@ H.params({ sort: '-party', f: ['a'] })   // write, without reloading – empty v
 H.params({ page: 'about' }, true)        // write and create a history entry
 ```
 
-`:` `/` `,` and `@` are written as they are, so the address stays readable: `?time=2026-09-13T20:00&page=meta/pages`.
+`:` `/` `,` `@` and letters like `å ä ö` are written as they are, so the address stays readable: `?time=2026-09-13T20:00&page=rösta`.
 
 ### `H.router({ param, start, render, params? })`
 
